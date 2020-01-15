@@ -1,5 +1,6 @@
 ### Reproduce bug on JS
-Kotlin **1.3.70-eap42** and Kotlin **1.3.61** (maybe early versions too, not test)  
+**JVM work's fine**  
+Kotlin-JS **1.3.70-eap42** and **1.3.61** (maybe early versions too, not test)  
 ```Kotlin
 class MyClass {
     val myVal: Int = 0
