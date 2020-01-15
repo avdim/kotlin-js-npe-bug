@@ -1,6 +1,5 @@
-#### Bug in Kotlin-JS  
-
-To reproduce bug on JS:  
+### Reproduce bug on JS
+Kotlin **1.3.70-eap42** and Kotlin **1.3.61** (maybe early versions too, not test)  
 ```Kotlin
 class MyClass {
     val myVal: Int = 0
@@ -15,12 +14,10 @@ fun main() {
     println("throws NPE on JS:")
     obj?.myFun(obj.myVal ?: 0)
 }
-```  
+```
+To reproduce run unit test ```./gradlew check```  
 
-Reproduce on Kotlin 1.3.70-eap-42 and 1.3.61  
-To reproduce - run unit test ```./gradlew check```  
-
-####Попытаемся понять что происходит
+### Попытаемся понять что происходит
 ```Kotlin
 println("works good:")
 obj?.myFun(obj.myVal)
@@ -31,7 +28,7 @@ obj?.myFun(obj.myVal ?: 0)
 Т.е. разница только в " obj.myVal **?: 0** "  
 Так что же такое добавляет **?: 0**, что падает NPE ?
 
-####Посмотрим на сгенерированный JS код:
+### Посмотрим на сгенерированный JS код:
 Соберём js код: ```./gradlew compileKotlinJs```  
 И смотрим в build/js/packages/js-npe-bug/kotlin/js-npe-bug.js
 
