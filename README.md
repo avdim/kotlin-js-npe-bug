@@ -17,6 +17,11 @@ fun main() {
 }
 ```
 To reproduce run unit test ```./gradlew check```  
+Console output:  
+```text
+TypeError: null is not an object (evaluating 'obj.myVal')
+at /home/dim/tmp/kotlin-js-npe-bug/src/commonMain/kotlin/Main.kt:12:20
+```  
 
 ### Попытаемся понять что происходит
 ```Kotlin
