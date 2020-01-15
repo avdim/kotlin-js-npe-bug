@@ -1,50 +1,54 @@
-#### Нашёл багу в kotlin JS  
+#### Bug in Kotlin-JS  
 
-Быстрое воспроизведение бага: https://play.kotlinlang.org/#eyJ2ZXJzaW9uIjoiMS4zLjYxIiwicGxhdGZvcm0iOiJqcyIsImFyZ3MiOiIiLCJqc0NvZGUiOiIiLCJub25lTWFya2VycyI6dHJ1ZSwidGhlbWUiOiJpZGVhIiwiY29kZSI6ImNsYXNzIE15Q2xhc3Mge1xuICAgIHZhbCBteVZhbDogSW50ID0gMFxuICAgIFxuICAgIGZ1biBteUZ1bihub25OdWxsYWJsZUFyZzogQW55KSB7XG4gICAgICAgIFxuICAgIH1cbn1cblxuZnVuIG1haW4oKSB7XG4gICAgdmFsIGNtZDogTXlDbGFzcz8gPSBudWxsXG4gICAgY21kPy5teUZ1bihjbWQubXlWYWwgPzogMClcbiAgICBwcmludGxuKFwiT24gSlMgZXJyb3IgdGhvcndzLiBPbiBKVk0gd29yaydzIGZpbmVcIilcbn0ifQ==
+To reproduce bug on JS:  
 ```Kotlin
 class MyClass {
     val myVal: Int = 0
-    fun myFun(nonNullableArg: Any) {
-        
-    }
+    fun myFun(arg: Int) = Unit
 }
-
 fun main() {
-    val cmd: MyClass? = null
-    cmd?.myFun(cmd.myVal ?: 0)
-    println("NPE thorws in JS. On JVM work's fine")
+    val obj: MyClass? = null
+
+    println("works good:")
+    obj?.myFun(obj.myVal)
+
+    println("throws NPE on JS:")
+    obj?.myFun(obj.myVal ?: 0)
 }
 ```  
 
-Бага проявляется и на более ранних версиях Kotlin (например 1.3.61).
-В этом примере использую kotlin 1.3.70-eap42
+Reproduce on Kotlin 1.3.70-eap-42 and 1.3.61  
+To reproduce - run unit test ```./gradlew check```  
 
-Для воспроизведения я написал Unit тест.  
-Для запуска: ```./gradlew clean jsBrowserTest```
+####Попытаемся понять что происходит
+```Kotlin
+println("works good:")
+obj?.myFun(obj.myVal)
 
-####Попытаемся понять что происходит.
+println("throws NPE on JS:")
+obj?.myFun(obj.myVal ?: 0)
+```
+Т.е. разница только в " obj.myVal **?: 0** "  
+Так что же такое добавляет **?: 0**, что падает NPE ?
+
+####Посмотрим на сгенерированный JS код:
 Соберём js код: ```./gradlew compileKotlinJs```  
 И смотрим в build/js/packages/js-npe-bug/kotlin/js-npe-bug.js
 
 (Пока не вчитываемся, код не красивый)   
 ```JavaScript
 function MyClass() {
-this.myVal = 0;
+    this.myVal = 0;
 }
-MyClass.prototype.myFun_za3rmp$ = function (nonNullableArg) {
+MyClass.prototype.myFun_za3lpa$ = function (arg) {  
 };
-function good() {
-var tmp$;
-var cmd = null;
-if (cmd != null) {
-  cmd.myFun_za3rmp$((tmp$ = cmd.myVal) != null ? tmp$ : 0);
-}}
-function bad() {
 var tmp$, tmp$_0;
-var cmd = null;
-tmp$_0 = (tmp$ = cmd.myVal) != null ? tmp$ : 0;
-cmd != null ? (cmd.myFun_za3rmp$(tmp$_0), Unit) : null;
-}
+var obj = null;
+//println('works good:');
+obj != null ? (obj.myFun_za3lpa$(obj.myVal), Unit) : null;
+//println('throws NPE on JS:');
+tmp$_0 = (tmp$ = obj.myVal) != null ? tmp$ : 0;
+obj != null ? (obj.myFun_za3lpa$(tmp$_0), Unit) : null;
 ```
 
 Приведу к более удобному виду:
@@ -52,27 +56,29 @@ cmd != null ? (cmd.myFun_za3rmp$(tmp$_0), Unit) : null;
 function MyClass() {
     this.myVal = 0;
 }
-
-MyClass.prototype.myFun = function (nonNullableArg) {
+MyClass.prototype.myFun = function (arg) {
+  
 };
 
-function good() {
-    var A;
-    var cmd = null;
-    if (cmd != null) {
-      cmd.myFun((A = cmd.myVal) != null ? A : 0);
-    }
-}
+var obj = null;
 
-function bad() {
-    var A;
-    var B;
-    var cmd = null;
+console.log('works good:');
+obj != null ? (obj.myFun(obj.myVal), Unit) : null; // Эта строка хорошая
 
-    // NPE падает тут:
-    B = (A = cmd.myVal) != null ? A : 0;
-
-    cmd != null ? (cmd.myFun(B), Unit) : null;
-}
+console.log('throws NPE on JS:');
+var tmp1, tmp2;
+tmp2 = (tmp1 = obj.myVal) != null ? tmp1 : 0; // Эта строка выбрасыват NPE (obj.myVal, где obj == null)
+obj != null ? (obj.myFun(tmp2), Unit) : null; // Эта строка почти не поменялась (тоже хорошая)
 ```
-Надеюсь что получится поправить такую багу...  
+Понятно... Значит obj предполагается не null. Этот код не прошёл проверку obj != null ? (...)  
+Попробуем прикинуть как должно было быть:  
+```JavaScript
+var tmp1, tmp2;
+obj != null ? (
+    tmp2 = (tmp1 = obj.myVal) != null ? tmp1 : 0, // засунули внутрь
+    obj.myFun(tmp2), Unit // остался старый кусок
+) : null;
+``` 
+Выглядит страшно, но работает.
+
+Так понимаю что JetBrains переписывают компилятор и может эта проблема решится с IR и новым js backend-ом.  
