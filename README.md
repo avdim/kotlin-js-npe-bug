@@ -1,3 +1,6 @@
+Status update: on new Kotlin IR to JS compliler bug allready fixed. :) Thanks to JetBrains.  
+Currenty new IR compiler in experimental status. I will update this project with the correct configuration later.
+
 ### Reproduce bug on JS (https://youtrack.jetbrains.com/issue/KT-35953)
 **JVM work's fine**  
 Kotlin-JS **1.3.70-eap42** and **1.3.61** (maybe early versions too, not test)  
