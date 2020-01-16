@@ -58,3 +58,9 @@ kotlin {
     }
 
 }
+
+tasks.getByName<org.jetbrains.kotlin.gradle.dsl.KotlinJsCompile>("compileKotlinJs") {
+    kotlinOptions {
+        freeCompilerArgs += listOf("-Xir-produce-js", "-Xgenerate-dts")
+    }
+}

@@ -1,92 +1,44 @@
-## Status update: Fixed in future versions.
-On new Kotlin IR to JS compliler bug allready fixed :) Thanks to JetBrains.  
-Currenty new IR compiler in experimental status. I will update this project with the correct configuration later.
-  
-  
-### Reproduce bug on JS (https://youtrack.jetbrains.com/issue/KT-35953)
-**JVM work's fine**  
-Kotlin-JS **1.3.70-eap42** and **1.3.61** (maybe early versions too, not test)  
+## Fixed configuraion:
+New Kotlin IR to JS compiler fix this Bug.
+Let's configure in build.gradle.kts:
 ```Kotlin
-class MyClass {
-    val myVal: Int = 0
-    fun myFun(arg: Int) = Unit
+tasks.getByName<org.jetbrains.kotlin.gradle.dsl.KotlinJsCompile>("compileKotlinJs") {
+    kotlinOptions {
+        freeCompilerArgs += listOf("-Xir-produce-js", "-Xgenerate-dts")
+    }
 }
-fun main() {
-    val obj: MyClass? = null
-
-    println("works good:")
-    obj?.myFun(obj.myVal)
-
-    println("throws NPE on JS:")
-    obj?.myFun(obj.myVal ?: 0)
-}
-```
-To reproduce run unit test ```./gradlew check```  
-Console output:  
-```text
-TypeError: null is not an object (evaluating 'obj.myVal')
-at /home/dim/tmp/kotlin-js-npe-bug/src/commonMain/kotlin/Main.kt:12:20
 ```  
 
-### Попытаемся понять что происходит
 ```Kotlin
-println("works good:")
-obj?.myFun(obj.myVal)
-
-println("throws NPE on JS:")
-obj?.myFun(obj.myVal ?: 0)
-```
-Т.е. разница только в " obj.myVal **?: 0** "  
-Так что же такое добавляет **?: 0**, что падает NPE ?
-
-### Посмотрим на сгенерированный JS код:
-Соберём js код: ```./gradlew compileKotlinJs```  
-И смотрим в build/js/packages/js-npe-bug/kotlin/js-npe-bug.js
-
-(Пока не вчитываемся, код не красивый)   
-```JavaScript
-function MyClass() {
-    this.myVal = 0;
+//Old code:
+fun main() {
+    val obj: MyClass? = null
+    println("Fixed in new Kotlin IR to JS compiler")
+    obj?.myFun(obj.myVal ?: 0)
 }
-MyClass.prototype.myFun_za3lpa$ = function (arg) {  
-};
-var tmp$, tmp$_0;
+```  
+
+Let's compile JS. ```./gradlew compileKotlinJs.```
+Same code now translates to better JS representation with and checks to nullability:
+```JavaScript
+//build/js/packages/js-npe-bug/kotlin/js-npe-bug.js:
 var obj = null;
-//println('works good:');
-obj != null ? (obj.myFun_za3lpa$(obj.myVal), Unit) : null;
-//println('throws NPE on JS:');
-tmp$_0 = (tmp$ = obj.myVal) != null ? tmp$ : 0;
-obj != null ? (obj.myFun_za3lpa$(tmp$_0), Unit) : null;
-```
-
-Приведу к более удобному виду:
-```JavaScript
-function MyClass() {
-    this.myVal = 0;
+println('Fixed in new Kotlin IR to JS compiler:');
+{
+  var tmp2_safe_receiver = obj;
+  if (tmp2_safe_receiver == null)
+    null;
+  else {
+    var tmp = tmp2_safe_receiver;
+    var tmp1_elvis_lhs = obj._get_myVal_();
+    tmp.myFun(tmp1_elvis_lhs == null ? 0 : tmp1_elvis_lhs);
+    Unit_getInstance();
+  }
 }
-MyClass.prototype.myFun = function (arg) {
+```
   
-};
+Now look at Nullability check ```if (tmp2_safe_receiver == null)``` 
 
-var obj = null;
 
-console.log('works good:');
-obj != null ? (obj.myFun(obj.myVal), Unit) : null; // Эта строка хорошая
-
-console.log('throws NPE on JS:');
-var tmp1, tmp2;
-tmp2 = (tmp1 = obj.myVal) != null ? tmp1 : 0; // Эта строка выбрасыват NPE (obj.myVal, где obj == null)
-obj != null ? (obj.myFun(tmp2), Unit) : null; // Эта строка почти не поменялась (тоже хорошая)
-```
-Понятно... Значит obj предполагается не null. Этот код не прошёл проверку obj != null ? (...)  
-Попробуем прикинуть как должно было быть:  
-```JavaScript
-var tmp1, tmp2;
-obj != null ? (
-    tmp2 = (tmp1 = obj.myVal) != null ? tmp1 : 0, // засунули внутрь
-    obj.myFun(tmp2), Unit // остался старый кусок
-) : null;
-``` 
-Выглядит страшно, но работает.
-
-Так понимаю, что JetBrains переписывают компилятор, и может эта проблема решится с IR и новым js backend-ом.  
+**Thank's JetBrains, it work's good!**    
+```./gradlew check```  
