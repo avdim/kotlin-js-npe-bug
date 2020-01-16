@@ -19,7 +19,7 @@ fun main() {
 ```  
 
 Let's compile JS. ```./gradlew compileKotlinJs.```
-Same code now translates to better JS representation with and checks to nullability:
+Same code now translates to better JS representation with checks to nullability:
 ```JavaScript
 //build/js/packages/js-npe-bug/kotlin/js-npe-bug.js:
 var obj = null;
