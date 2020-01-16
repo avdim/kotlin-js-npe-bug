@@ -1,6 +1,7 @@
 ## Status update: Fixed in future versions.
 On new Kotlin IR to JS compliler bug allready fixed :) Thanks to JetBrains.  
-Currenty new IR compiler in experimental status. I will update this project with the correct configuration later.
+Currenty new IR compiler in experimental status.
+Fixed in branch: https://github.com/avdim/kotlin-js-npe-bug/tree/fixed_experimental_ir_compiler 
   
   
 ### Reproduce bug on JS (https://youtrack.jetbrains.com/issue/KT-35953)
